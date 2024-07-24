@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<!-- saved from url=(0057)https://dam-dev.mep.mazda.com/ccsv/RSConcept/Aframe6.html -->
+<html lang="ja">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>360度画像VRビューア</title>
+    <style>
+      body {
+        margin: 0;
+      }
+      canvas {
+        display: block;
+      }
+    </style>
+  </head>
+  <body>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.rawgit.com/mrdoob/three.js/r128/examples/js/controls/DeviceOrientationControls.js"></script>
+    <script src="https://cdn.rawgit.com/mrdoob/three.js/r128/examples/js/controls/OrbitControls.js"></script>
+    <script src="https://cdn.rawgit.com/mrdoob/three.js/r128/examples/js/effects/StereoEffect.js"></script>
+    <script src="https://cdn.rawgit.com/mrdoob/three.js/r128/examples/js/vr/WebVR.js"></script>
+    <script>
+      // シーン、カメラ、レンダラーの初期化
+      var scene = new THREE.Scene();
+      var camera = new THREE.PerspectiveCamera(
+        75,
+        window.innerWidth / window.innerHeight,
+        0.1,
+        1000
+      );
+      var renderer = new THREE.WebGLRenderer();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      document.body.appendChild(renderer.domElement);
+
+      // 360度画像のテクスチャをロード
+      var textureLoader = new THREE.TextureLoader();
+      textureLoader.load("./img/R0010006.JPG", function (texture) {
+        var geometry = new THREE.SphereGeometry(500, 60, 40);
+        var material = new THREE.MeshBasicMaterial({
+          map: texture,
+          side: THREE.DoubleSide,
+        });
+        var sphere = new THREE.Mesh(geometry, material);
+        scene.add(sphere);
+      });
+
+      // カメラの位置を調整
+      camera.position.set(0, 0, 0.1);
+
+      // デバイスオリエンテーションコントロールの追加
+      var deviceControls = new THREE.DeviceOrientationControls(camera);
+
+      // オービットコントロールの追加
+      var orbitControls = new THREE.OrbitControls(camera, renderer.domElement);
+      orbitControls.enableZoom = false;
+      orbitControls.enablePan = false;
+
+      // ステレオエフェクトの追加
+      var effect = new THREE.StereoEffect(renderer);
+      effect.setSize(window.innerWidth, window.innerHeight);
+
+      // レンダリングループ
+      function animate() {
+        requestAnimationFrame(animate);
+        deviceControls.update();
+        orbitControls.update();
+        effect.render(scene, camera);
+      }
+      animate();
+
+      // ウィンドウリサイズ対応
+      window.addEventListener("resize", function () {
+        camera.aspect = window.innerWidth / window.innerHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        effect.setSize(window.innerWidth, window.innerHeight);
+      });
+    </script>
+    <canvas
+      width="1216"
+      height="956"
+      style="display: block; width: 1216px; height: 956px"
+    ></canvas>
+  </body>
+</html>
