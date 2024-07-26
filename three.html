@@ -1,9 +1,9 @@
 <!DOCTYPE html>
 <html lang="ja">
   <head>
-    <meta charset="UTF-8" />
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Three.js WebXR 360 Image</title>
+    <title>360度画像VRビューア</title>
     <style>
       body {
         margin: 0;
@@ -11,78 +11,108 @@
       canvas {
         display: block;
       }
+      #permissionButton {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        padding: 20px;
+        background-color: #008cba;
+        color: white;
+        border: none;
+        cursor: pointer;
+      }
     </style>
   </head>
   <body>
+    <button id="permissionButton">加速度センサーを有効にする</button>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    <script src="https://threejs.org/examples/js/controls/OrbitControls.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/jsm/webxr/VRButton.js"></script>
+    <script src="https://cdn.rawgit.com/mrdoob/three.js/r128/examples/js/controls/DeviceOrientationControls.js"></script>
+    <script src="https://cdn.rawgit.com/mrdoob/three.js/r128/examples/js/controls/OrbitControls.js"></script>
+    <script src="https://cdn.rawgit.com/mrdoob/three.js/r128/examples/js/effects/StereoEffect.js"></script>
+    <script src="https://cdn.rawgit.com/mrdoob/three.js/r128/examples/js/vr/WebVR.js"></script>
     <script>
-      let scene, camera, renderer, sphere, controls;
+      var scene, camera, renderer, deviceControls, orbitControls, effect;
 
       function init() {
-        // シーンの作成
+        // シーン、カメラ、レンダラーの初期化
         scene = new THREE.Scene();
-
-        // カメラの作成
         camera = new THREE.PerspectiveCamera(
           75,
           window.innerWidth / window.innerHeight,
           0.1,
           1000
         );
-        camera.position.set(0, 0, 0.1);
-
-        // レンダラーの作成
-        renderer = new THREE.WebGLRenderer({ antialias: true });
-        renderer.setPixelRatio(window.devicePixelRatio);
+        renderer = new THREE.WebGLRenderer();
         renderer.setSize(window.innerWidth, window.innerHeight);
-        renderer.xr.enabled = true;
         document.body.appendChild(renderer.domElement);
 
-        // VRボタンの追加
-        document.body.appendChild(VRButton.createButton(renderer));
+        // 360度画像のテクスチャをロード
+        var textureLoader = new THREE.TextureLoader();
+        textureLoader.load("./img/R0010006.JPG", function (texture) {
+          var geometry = new THREE.SphereGeometry(500, 60, 40);
+          var material = new THREE.MeshBasicMaterial({
+            map: texture,
+            side: THREE.DoubleSide,
+          });
+          var sphere = new THREE.Mesh(geometry, material);
+          scene.add(sphere);
+        });
 
-        // 球体ジオメトリの作成
-        const geometry = new THREE.SphereGeometry(500, 60, 40);
-        geometry.scale(-1, 1, 1); // 内側が見えるようにスケールを反転
+        // カメラの位置を調整
+        camera.position.set(0, 0, 0.1);
 
-        // テクスチャのロード
-        const textureLoader = new THREE.TextureLoader();
-        const texture = textureLoader.load("path/to/your-360-image.jpg");
+        // デバイスオリエンテーションコントロールの追加
+        deviceControls = new THREE.DeviceOrientationControls(camera);
 
-        // マテリアルの作成
-        const material = new THREE.MeshBasicMaterial({ map: texture });
+        // オービットコントロールの追加
+        orbitControls = new THREE.OrbitControls(camera, renderer.domElement);
+        orbitControls.enableZoom = false;
+        orbitControls.enablePan = false;
 
-        // メッシュの作成
-        sphere = new THREE.Mesh(geometry, material);
-        scene.add(sphere);
+        // ステレオエフェクトの追加
+        effect = new THREE.StereoEffect(renderer);
+        effect.setSize(window.innerWidth, window.innerHeight);
 
-        // ウィンドウサイズ変更時の処理
-        window.addEventListener("resize", onWindowResize, false);
+        // レンダリングループ
+        function animate() {
+          requestAnimationFrame(animate);
+          deviceControls.update();
+          orbitControls.update();
+          effect.render(scene, camera);
+        }
+        animate();
 
-        // カメラコントロールの追加
-        controls = new THREE.OrbitControls(camera, renderer.domElement);
-        controls.enableZoom = false; // ズームを無効化（任意）
+        // ウィンドウリサイズ対応
+        window.addEventListener("resize", function () {
+          camera.aspect = window.innerWidth / window.innerHeight;
+          camera.updateProjectionMatrix();
+          renderer.setSize(window.innerWidth, window.innerHeight);
+          effect.setSize(window.innerWidth, window.innerHeight);
+        });
       }
 
-      function onWindowResize() {
-        camera.aspect = window.innerWidth / window.innerHeight;
-        camera.updateProjectionMatrix();
-        renderer.setSize(window.innerWidth, window.innerHeight);
-      }
-
-      function animate() {
-        renderer.setAnimationLoop(render);
-      }
-
-      function render() {
-        controls.update();
-        renderer.render(scene, camera);
-      }
-
-      init();
-      animate();
+      document
+        .getElementById("permissionButton")
+        .addEventListener("click", function () {
+          if (typeof DeviceMotionEvent.requestPermission === "function") {
+            DeviceMotionEvent.requestPermission()
+              .then((permissionState) => {
+                if (permissionState === "granted") {
+                  init();
+                  document.getElementById("permissionButton").style.display =
+                    "none";
+                } else {
+                  alert("加速度センサーの許可が必要です。");
+                }
+              })
+              .catch(console.error);
+          } else {
+            // iOS 13以前や他のブラウザではそのまま初期化
+            init();
+            document.getElementById("permissionButton").style.display = "none";
+          }
+        });
     </script>
   </body>
 </html>
