@@ -106,9 +106,11 @@
                   alert("加速度センサーの許可が必要です。");
                 }
               })
-              .catch(console.error);
+              .catch((error) => {
+                console.error("Permission request error: ", error);
+              });
           } else {
-            // iOS 13以前や他のブラウザではそのまま初期化
+            // iOS 12以前や他のブラウザではそのまま初期化
             init();
             document.getElementById("permissionButton").style.display = "none";
           }
